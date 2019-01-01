@@ -1,52 +1,64 @@
 from bs4 import BeautifulSoup
 import requests
-import ssl
 import pandas as pd
 import xlsxwriter
-from urlmatch import urlmatch
 import time
-ssl._create_default_https_context = ssl._create_unverified_context
+import sys
+import argparse
+
+#使用argparse讓程式可以直接透過指令產出Excel 不需要進程式改資訊
+parser = argparse.ArgumentParser(description='Parse the Zhenfuxiagou_zhaobiao need below argument.')
+parser.add_argument('--Name', '-n', type=str, required=True, help='Which mechanism you want to search?')
+parser.add_argument('--Startdate', '-s', type=str, required=True, help='Example : 107/12/01')
+parser.add_argument('--Enddate', '-e', type=str, required=True, help='Example : 107/12/19')
+parser.add_argument('--Filename', '-f', type=str, required=True, help='Example : even.xlsx')
+
+args = parser.parse_args()
+print(args.Name, args.Startdate, args.Enddate, args.Filename)
+
+
 zhenfu_login_url = 'https://web.pcc.gov.tw/pis/main/sso/login.jsp'
 zhenfu_juebiao_url = 'https://web.pcc.gov.tw/tps/pss/tender.do?searchMode=supplier&searchType=advance'
 zhenfu_after_search_url = 'https://web.pcc.gov.tw/tps/'
+
+#建立一個連線的Session
 session = requests.Session()
-login_payload =  {'id': '13007060', 
-		    	  'password': 'ac55888'}
-
+#帶入帳密Payload
+login_payload =  {'id': 'test', 
+		    	  'password': '123123'}
+#進入login頁面並且帶payload進去
 r = session.post(zhenfu_login_url, data=login_payload)
-
-Date = []
-Name = [] 
-Times = []
-Vendor = []
-Budget = []
-Estimate = []
-Award = []
+#初始化所需資料項目
+Date     = [] #決標日期
+Name     = [] #工程名稱
+Times    = [] #招標次數
+Vendor   = [] #得標廠商
+Budget   = [] #工程預算
+Estimate = [] #工程底價
+Award    = [] #決標金額
 
 #r = session.get('https://web.pcc.gov.tw/tps/pss/tender.do?method=goSearch&searchMode=supplier&searchType=advance&searchTarget=ATM')
 #print(r.text)
 payload = { 'method': 'search',
 			'searchMethod': 'true',
 			'searchTarget': 'ATM',
-			'orgName': '后里區公所',
-			'awardAnnounceStartDate': '104/01/01',
-			'awardAnnounceEndDate': '107/12/31',
+			'orgName': args.Name,
+			'awardAnnounceStartDate': args.Startdate,
+			'awardAnnounceEndDate': args.Enddate,
 			'proctrgCate':'1', # 1為工程 2為財務 3為勞務
 			'radProctrgCate':'1' # 1為工程 2為財務 3為勞務
 			}
-#r = session.post(zhenfu_juebiao_url, data=payload)
-#print(r.text)
+#進入頁面後，輸入要查詢的相關資料並帶入
 r = session.post(zhenfu_juebiao_url, data=payload)
-#print(r.text)
 
+#開始解析所拿到的html (在這邊是查詢到的所有工程案件)
 soup = BeautifulSoup(r.text, 'lxml')
 soup_find_all_href = soup.find_all('a')
 href_string =[]
 after_search_string = ''
-for l in soup_find_all_href:
 
-	#r = session.get(l.get('href'))
-	#print(r.text)
+#拿到每個標案的超連結
+for l in soup_find_all_href:
 	href_string.append(l.get('href'))
 
 href_string = set(href_string) #去除重複資料
@@ -58,39 +70,16 @@ for href_after_strip in href_string:
 	after_search_string = zhenfu_after_search_url+href_after_strip #加上前面的網址
 	print(after_search_string)
 
+	#拿到標案的超連結session
 	r = session.get(after_search_string, verify=False)
-
 	print(r.status_code, r.url)
-	match_pattern = 'http://web.pcc.gov.tw/tps/tpam/validate*'
-	'''
-	while urlmatch(match_pattern, r.url): #如果進入到驗證模式．開始處理
-		soup = BeautifulSoup(r.text, 'lxml')
-		#print(r.text)
-		soup_find = soup.find_all('img', {'class':'choose'})
-		id_find   = soup.find_all('input',{'name':'id'})
-		poke_id=[]
-		poke_url_id=[]
-		validation_url=r.url
-		for p in soup_find:
-			poke_id.append(p['alt'])
-		for p in id_find:
-			poke_url_id.append(p['value'])
-		#print(poke_id[0],poke_id[2])
-		poke_payload =  {'choose': [poke_id[2], poke_id[3]],
-						 'id' : poke_url_id[0]
-				    	 }
-		r = session.post(r.url, data=poke_payload)
-		print(r.url, r.status_code, poke_payload)
-		if r.status_code == 302:
-			break
-	'''
+
+	#標案的html解析
 	soup = BeautifulSoup(r.text, 'lxml')
+	#爬出所要的資料(Tag)
 	soup_find = soup.find_all(['td', 'th'], {'class':['T11b', 'newstop'], 
 							   'bgcolor':['#FFCCCC', '#EFF1F1', '#ffdd83', '#ddc09e', '#DAEBED', '#FFFF99']})
-
-
-	
-
+	#開始拿Tag裡面的資料
 	for p in soup_find:
 
 		if p.string == '決標日期':
@@ -105,7 +94,6 @@ for href_after_strip in href_string:
 			Times.append(p.find_next_sibling('td').string.strip())
 			print(Times)		
 		
-
 		if p.string == '　　得標廠商':
 			Vendor.append(p.find_next_sibling('td').string.strip())
 			print(Vendor)
@@ -122,8 +110,7 @@ for href_after_strip in href_string:
 			Award.append(p.find_next_sibling('td').string.strip()[:-1])
 			print(Award)		
 
-		#print(p.get_text())
-
+    #有些資料取不到，需要增加判斷式避免Pandas DataFrame出錯
 	if len(Date) != len(Name):
 		Date.append('null')
 	if len(Times) != len(Name):
@@ -137,28 +124,21 @@ for href_after_strip in href_string:
 	if len(Award) != len(Name):
 		Award.append('null')
 
-	time.sleep(15)
-zhenfu_search_dict = {"Date" : Date,
-					  "Name" : Name,
-					  "Times" : Times,
-					  "Vendor" : Vendor,
-					  "Budget" : Budget,
+	#因有polling次數的關係，15秒是抓資料的極限
+	time.sleep(15) 
+
+zhenfu_search_dict = {"Date"     : Date,
+					  "Name"     : Name,
+					  "Times"    : Times,
+					  "Vendor"   : Vendor,
+					  "Budget"   : Budget,
 					  "Estimate" : Estimate,
-					  "Award" : Award
+					  "Award"    : Award
 
 }
-
+#寫入pandas dataframe，每項資料長度必須相同
 zhenfu_df = pd.DataFrame(zhenfu_search_dict, columns=['Date','Name','Times','Vendor','Budget','Estimate','Award'])
-writer = pd.ExcelWriter('Houli104-107.xlsx', engine='xlsxwriter')
+writer = pd.ExcelWriter(args.Filename, engine='xlsxwriter')
 zhenfu_df.to_excel(writer, 'Sheet1')
 writer.save()
 
-
-'''
-r = session.get(href_string[0])
-print(r.text)
-'''
-'''
-	def get_link_list():
-	list_req = requests.get(zhenfu_juebiao_url)
-'''
