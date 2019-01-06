@@ -35,6 +35,9 @@ parser.add_argument('--Filename', '-f', type=str, required=True, help='Example :
 args = parser.parse_args()
 print(args.Name, args.Startdate, args.Enddate, args.Filename)
 
+def max_length(name, date, times, vendor, budget, estimate, award):
+	max_length = max(len(name), len(date), len(times), len(vendor), len(budget), len(estimate), len(award))
+	return max_length
 
 def get_info(soup_find_all_href):
 	#拿到每個標案的超連結
@@ -64,57 +67,95 @@ def get_info(soup_find_all_href):
 		for p in soup_find:
 
 			if p.string == '決標日期':
-				Date.append(p.find_next_sibling('td').string.strip())
-				print(Date)
+				if p.find_next_sibling('td').string is None:
+					Date.append('None')
+					print(Date)
+				else:
+					Date.append(p.find_next_sibling('td').string.strip())
+					print(Date)
 
 			if p.string == '標案名稱':
-				Name.append(p.find_next_sibling('td').string.strip())
-				print(Name)
+				if p.find_next_sibling('td').string is None:
+					Name.append('None')
+					print(Name)
+				else:				
+					Name.append(p.find_next_sibling('td').string.strip())
+					print(Name)
 			
 			if p.string == '新增公告傳輸次數':
-				Times.append(p.find_next_sibling('td').string.strip())
-				print(Times)		
+				if p.find_next_sibling('td').string is None:
+					Name.append('None')
+					print(Name)
+				else:		
+					Times.append(p.find_next_sibling('td').string.strip())
+					print(Times)		
 			
 			if p.string == '　　得標廠商':
-				Vendor.append(p.find_next_sibling('td').string.strip())
-				print(Vendor)
+				if p.find_next_sibling('td').string is None:
+					Vendor.append('None')
+					print(Vendor)
+				else:
+					Vendor.append(p.find_next_sibling('td').string.strip())
+					print(Vendor)
 
 			if p.string == '預算金額':
-				Budget.append(p.find_next_sibling('td').string.strip()[:-1])
-				print(Budget)
+				if p.find_next_sibling('td').string is None:
+					Budget.append('None')
+					print(Budget)
+				else:		
+					Budget.append(p.find_next_sibling('td').string.strip()[:-1])
+					print(Budget)
 
 			if p.string == '底價金額':
-				Estimate.append(p.find_next_sibling('td').string.strip()[:-1])
-				print(Estimate)
+				if p.find_next_sibling('td').string is None:
+					Estimate.append('None')
+					print(Estimate)
+				else:		
+					Estimate.append(p.find_next_sibling('td').string.strip()[:-1])
+					print(Estimate)
 
 			if p.string == '　決標金額':
-				Award.append(p.find_next_sibling('td').string.strip()[:-1])
-				print(Award)		
+				if p.find_next_sibling('td').string is None:
+					Award.append('None')
+					print(Award)
+				else:		
+					Award.append(p.find_next_sibling('td').string.strip()[:-1])
+					print(Award)		
 
 	    #有些資料取不到，需要增加判斷式避免Pandas DataFrame出錯
-		if len(Date) != len(Name):
+		while len(Name) < max_length(Name, Date, Times, Vendor, Budget, Estimate, Award):	
+			Name.append('null')
+			print(Name)
+		while len(Date) < max_length(Name, Date, Times, Vendor, Budget, Estimate, Award):
 			Date.append('null')
-		if len(Times) != len(Name):
+			print(Date)
+		while len(Times) < max_length(Name, Date, Times, Vendor, Budget, Estimate, Award):
 			Times.append('null')
-		if len(Vendor) != len(Name):
+			print(Times)
+		while len(Vendor) < max_length(Name, Date, Times, Vendor, Budget, Estimate, Award):
 			Vendor.append('null')
-		if len(Budget) != len(Name):
+			print(Vendor)
+		while len(Budget) < max_length(Name, Date, Times, Vendor, Budget, Estimate, Award):
 			Budget.append('null')
-		if len(Estimate) != len(Name):
+			print(Budget)
+		while len(Estimate) < max_length(Name, Date, Times, Vendor, Budget, Estimate, Award):
 			Estimate.append('null')
-		if len(Award) != len(Name):
+			print(Estimate)
+		while len(Award) < max_length(Name, Date, Times, Vendor, Budget, Estimate, Award):
 			Award.append('null')
+			print(Award)
+		#print(max(len(Date), len(Times), len(Vendor), len(Budget), len(Estimate), len(Award)))
 
 		#因有polling次數的關係，15秒是抓資料的極限
-		time.sleep(15) 
+		time.sleep(20) 
 
 
 
 #建立一個連線的Session
 session = requests.Session()
 #帶入帳密Payload
-login_payload =  {'id': 'test', 
-		    	  'password': 'ac532158188'}
+login_payload =  {'id': 'asdfasdfdasf', 
+		    	  'password': 'asdfasdfdsf'}
 #進入login頁面並且帶payload進去
 r = session.post(zhenfu_login_url, data=login_payload)
 
