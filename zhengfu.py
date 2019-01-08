@@ -154,8 +154,8 @@ def get_info(soup_find_all_href):
 #建立一個連線的Session
 session = requests.Session()
 #帶入帳密Payload
-login_payload =  {'id': 'asdfasdfdasf', 
-		    	  'password': 'asdfasdfdsf'}
+login_payload =  {'id': 'ˇ123123', 
+		    	  'password': '123123'}
 #進入login頁面並且帶payload進去
 r = session.post(zhenfu_login_url, data=login_payload)
 
@@ -202,7 +202,8 @@ zhenfu_search_dict = {"Date"     : Date,
 }
 #寫入pandas dataframe，每項資料長度必須相同
 zhenfu_df = pd.DataFrame(zhenfu_search_dict, columns=['Date','Name','Times','Vendor','Budget','Estimate','Award'])
+zhenfu_df = zhenfu_df.drop_duplicates(subset=['Name'],keep='first')
 writer = pd.ExcelWriter(args.Filename, engine='xlsxwriter')
 zhenfu_df.to_excel(writer, 'Sheet1')
-writer.save()
+writer.save()	
 
